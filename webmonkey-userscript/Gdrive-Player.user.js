@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gdrive Player - Google Drive Proxy API
 // @description  Watch videos in external player.
-// @version      1.0.0
+// @version      1.0.1
 // @match        *://gdriveplayer.co/*
 // @match        *://*.gdriveplayer.co/*
 // @match        *://gdriveplayer.io/*
@@ -214,6 +214,8 @@ var process_page = function() {
     else
       video_url = unsafeWindow.location.protocol + '//' + unsafeWindow.location.hostname + '/' + video_url
   }
+
+  video_url += '#video.m3u8'
 
   process_hls_url(video_url)
 }
