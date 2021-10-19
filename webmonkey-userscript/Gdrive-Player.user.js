@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gdrive Player - Google Drive Proxy API
 // @description  Watch videos in external player.
-// @version      1.0.1
+// @version      1.0.2
 // @match        *://gdriveplayer.co/*
 // @match        *://*.gdriveplayer.co/*
 // @match        *://gdriveplayer.io/*
@@ -34,18 +34,24 @@
 // ----------------------------------------------------------------------------- constants
 
 var user_options = {
-  "ms_delay_before_process_page": 1000,
-
-  "redirect_to_webcast_reloaded": true,
-  "force_http":                   true,
-  "force_https":                  false
+  "common": {
+    "ms_delay_before_process_page": 1000
+  },
+  "webmonkey": {
+    "post_intent_redirect_to_url":  "about:blank"
+  },
+  "greasemonkey": {
+    "redirect_to_webcast_reloaded": true,
+    "force_http":                   true,
+    "force_https":                  false
+  }
 }
 
 // ----------------------------------------------------------------------------- URL links to tools on Webcast Reloaded website
 
 var get_webcast_reloaded_url = function(video_url, vtt_url, referer_url, force_http, force_https) {
-  force_http  = (typeof force_http  === 'boolean') ? force_http  : user_options.force_http
-  force_https = (typeof force_https === 'boolean') ? force_https : user_options.force_https
+  force_http  = (typeof force_http  === 'boolean') ? force_http  : user_options.greasemonkey.force_http
+  force_https = (typeof force_https === 'boolean') ? force_https : user_options.greasemonkey.force_https
 
   var encoded_video_url, encoded_vtt_url, encoded_referer_url, webcast_reloaded_base, webcast_reloaded_url
 
@@ -78,7 +84,7 @@ var redirect_to_url = function(url) {
 
   if (typeof GM_loadUrl === 'function') {
     if (typeof GM_resolveUrl === 'function')
-      url = GM_resolveUrl(url, unsafeWindow.location.href)
+      url = GM_resolveUrl(url, unsafeWindow.location.href) || url
 
     GM_loadUrl(url, 'Referer', unsafeWindow.location.href)
   }
@@ -92,6 +98,19 @@ var redirect_to_url = function(url) {
   }
 }
 
+var process_webmonkey_post_intent_redirect_to_url = function() {
+  var url = null
+
+  if (typeof user_options.webmonkey.post_intent_redirect_to_url === 'string')
+    url = user_options.webmonkey.post_intent_redirect_to_url
+
+  if (typeof user_options.webmonkey.post_intent_redirect_to_url === 'function')
+    url = user_options.webmonkey.post_intent_redirect_to_url()
+
+  if (typeof url === 'string')
+    redirect_to_url(url)
+}
+
 var process_video_url = function(video_url, video_type, referer_url) {
   if (!referer_url)
     referer_url = unsafeWindow.location.href
@@ -99,9 +118,10 @@ var process_video_url = function(video_url, video_type, referer_url) {
   if (typeof GM_startIntent === 'function') {
     // running in Android-WebMonkey: open Intent chooser
     GM_startIntent(/* action= */ 'android.intent.action.VIEW', /* data= */ video_url, /* type= */ video_type, /* extras: */ 'referUrl', referer_url)
+    process_webmonkey_post_intent_redirect_to_url()
     return true
   }
-  else if (user_options.redirect_to_webcast_reloaded) {
+  else if (user_options.greasemonkey.redirect_to_webcast_reloaded) {
     // running in standard web browser: redirect URL to top-level tool on Webcast Reloaded website
     redirect_to_url(get_webcast_reloaded_url(video_url, /* vtt_url= */ null, referer_url))
     return true
@@ -220,6 +240,6 @@ var process_page = function() {
   process_hls_url(video_url)
 }
 
-setTimeout(process_page, user_options.ms_delay_before_process_page)
+setTimeout(process_page, user_options.common.ms_delay_before_process_page)
 
 // -----------------------------------------------------------------------------
